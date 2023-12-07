@@ -1,7 +1,5 @@
 from celery import shared_task
 import logging
-import requests
-import json
 from django.core.serializers import deserialize
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +7,6 @@ from rest_framework import status
 logger = logging.getLogger(__name__)
 from ..celery_services import celery_app
 from stock_home.models import Users, StockData, Transaction
-from stock_home.serializers import TransactionSerializer
 
 
 @celery_app.task

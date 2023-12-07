@@ -133,3 +133,11 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# settings.py
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Replace with your actual broker URL
+
+# Flower configuration
+FLOWER_API_URL = 'http://localhost:5555/api'
+FLOWER_BASIC_AUTH = ['admin:admin']

@@ -23,9 +23,9 @@ celery_app.conf.update(timezone="Asia/Karachi")
 
 celery_app.autodiscover_tasks()
 
-celery_app.conf.beat_schedule = {
-    "check_video_status": {
-        "task": "check_video_status",
-        "schedule": 30, # seconds to schedule
-    },
-}
+# celery_app.conf.beat_schedule = {
+#     "check_video_status": {
+#         "task": "check_video_status",
+#         "schedule": 30, # seconds to schedule
+#     },
+# }
