@@ -1,6 +1,8 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status
 from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from stock_home.serializers import UserSerializer, StockDataSerializer, TransactionSerializer
 from stock_home.models import Users, StockData, Transaction
@@ -13,20 +15,47 @@ class UsersViewSet(ModelViewSet):
     queryset = Users.objects.all()
     serializer_class = UserSerializer
 
-    def list(self, request):
-        return Response(self.serializer_class(self.queryset, many=True).data, status=status.HTTP_200_OK)
+    @swagger_auto_schema(
+        operation_description="Retrieve a list of YourModel instances.",
+        # request_body=UserSerializer,
+        responses={
+            200: UserSerializer(many=True),
+            # Add other response codes and descriptions as needed
+        },
+        manual_parameters=[
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description="User ID",
+                type=openapi.TYPE_STRING,
+                required=True,
+            ),
+        ],
+    )
+    def list(self, request, *args, **kwargs):
+        """
+        Retrieve a list of Users.
+        """
+        return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
+        """
+        Create a new instance of Users.
+        """
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         username = serializer.validated_data["username"]
-        balance = serializer.validated_data["balance"]
+        balance = serializer.validated_data["initial_balance"]
         Users.objects.create(username=username, initial_balance=balance)
-        return Response(status=status.HTTP_201_CREATED)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve details of a user by user_id.
+        """
         user_id = request.GET.get('user_id')
         if not user_id:
             return Response({'error': 'User ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -47,25 +76,13 @@ class StockDataViewSet(ModelViewSet):
     queryset = StockData.objects.all()
     serializer_class = StockDataSerializer
 
-    def list(self, request):
-        return Response(self.serializer_class(self.queryset, many=True).data, status=status.HTTP_200_OK)
+    @swagger_auto_schema(responce_body=StockDataSerializer)
+    def list(self, request, *args, **kwargs):
+        return super(StockDataViewSet, self).list(request, *args, **kwargs)
 
+    @swagger_auto_schema(request_body=StockDataSerializer)
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer_valid = serializer.validated_data
-        ticker = serializer_valid["ticker"]
-        open_price = serializer_valid["open_price"]
-        close_price = serializer_valid["close_price"]
-        high = serializer_valid["high"]
-        low = serializer_valid["low"]
-        volume = serializer_valid["volume"]
-
-        StockData.objects.create(ticker=ticker, open_price=open_price, close_price=close_price, high=high, low=low,
-                                 volume=volume)
-        return Response(status=status.HTTP_201_CREATED)
+        return super(StockDataViewSet, self).create(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         user_id = self.request.query_params.get('user_id')
@@ -78,6 +95,7 @@ class TransactionViewSet(ModelViewSet):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
+    @swagger_auto_schema(request_body=TransactionSerializer)
     def create(self, request, *args, **kwargs):
         user_id = request.data.get('user_id')
         ticker = request.data.get('ticker')

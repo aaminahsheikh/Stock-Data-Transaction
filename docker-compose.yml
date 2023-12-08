@@ -1,0 +1,47 @@
+version: '3'
+
+networks:
+  my_network:
+    driver: bridge
+
+services:
+  web:
+    build:
+      context: ./
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - stockdata
+      - redis
+    networks:
+      - my_network
+
+  worker:
+    build:
+      context: ./
+    command: celery -A stock_home.celery_services.celery_services.celery_app worker --loglevel=INFO
+    volumes:
+      - ./:/app
+    depends_on:
+      - stockdata
+      - redis
+    networks:
+      - my_network
+
+  stockdata:
+    container_name: stockdata
+    image: postgres:13
+    environment:
+      POSTGRES_DB: stockdata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/stockdata
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
