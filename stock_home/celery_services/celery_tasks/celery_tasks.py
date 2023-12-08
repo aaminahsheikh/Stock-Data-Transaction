@@ -1,6 +1,5 @@
 from celery import shared_task
 import logging
-from django.core.serializers import deserialize
 from rest_framework.response import Response
 from rest_framework import status
 

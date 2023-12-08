@@ -148,8 +148,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # settings.py
-
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Replace with your actual broker URL
+CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
+CELERY_RESULT_BACKEND = os.environ['CELERY_RESULT_BACKEND']
 
 # Flower configuration
 FLOWER_API_URL = 'http://localhost:5555/api'
