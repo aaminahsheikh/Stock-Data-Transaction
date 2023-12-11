@@ -1,6 +1,7 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -23,7 +24,7 @@ class UsersViewSet(ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     @swagger_auto_schema(
-        request_body=YourModelSerializer,
+        request_body=UserSerializer,
         responses={status.HTTP_201_CREATED: UserSerializer()},
     )
     def create(self, request, *args, **kwargs):
@@ -84,19 +85,27 @@ class StockDataViewSet(ModelViewSet):
         return super(StockDataViewSet, self).create(request, *args, **kwargs)
 
     @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('ticker', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='ID of the stock data'),
+        ],
         responses={status.HTTP_200_OK: StockDataSerializer()},
-        operation_summary="Retrieve a user by user_id.",
     )
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve instance of StockData.
         """
-        user_id = self.request.query_params.get('user_id')
-        if not user_id:
+        ticker_id = self.request.query_params.get('ticker')
+        if not ticker_id:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        user = Users.objects.get(username=user_id)
-        serializer = self.serializer_class(user)
+        ticker = cache.get(f'ticker_{ticker_id}')
+        if ticker is None:
+            ticker_obj = self.queryset.get(id=ticker_id)
+            if not ticker_obj:
+                return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            cache.set(f'ticker_{ticker_id}', ticker_obj)
+        serializer = self.serializer_class(ticker)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -127,15 +136,23 @@ class TransactionViewSet(ModelViewSet):
         return Response(status=status.HTTP_201_CREATED)
 
     @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description="User ID",
+                type=openapi.TYPE_STRING,
+            ),
+        ],
         responses={status.HTTP_200_OK: TransactionSerializer(many=True)},
         operation_summary="Retrieve transactions for a user",
     )
     @action(detail=False, methods=['GET'])
-    def get_queryset(self):
+    def get_queryset(self, *args, **kwargs):
         """
         Get transactions against a user_id.
         """
         user_id = self.request.query_params.get('user_id')
         transactions = Transaction.objects.filter(user=user_id)
-        serializer = self.get_serializer(transactions, many=True)
+        serializer = self.serializer_class(transactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
