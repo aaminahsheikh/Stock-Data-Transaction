@@ -15,29 +15,17 @@ class UsersViewSet(ModelViewSet):
     queryset = Users.objects.all()
     serializer_class = UserSerializer
 
-    @swagger_auto_schema(
-        operation_description="Retrieve a list of YourModel instances.",
-        # request_body=UserSerializer,
-        responses={
-            200: UserSerializer(many=True),
-            # Add other response codes and descriptions as needed
-        },
-        manual_parameters=[
-            openapi.Parameter(
-                'user_id',
-                openapi.IN_QUERY,
-                description="User ID",
-                type=openapi.TYPE_STRING,
-                required=True,
-            ),
-        ],
-    )
+    @swagger_auto_schema(responce_body=UserSerializer)
     def list(self, request, *args, **kwargs):
         """
         Retrieve a list of Users.
         """
         return super().list(request, *args, **kwargs)
 
+    @swagger_auto_schema(
+        request_body=YourModelSerializer,
+        responses={status.HTTP_201_CREATED: UserSerializer()},
+    )
     def create(self, request, *args, **kwargs):
         """
         Create a new instance of Users.
@@ -52,6 +40,12 @@ class UsersViewSet(ModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('user_id', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='ID of the user'),
+        ],
+        responses={status.HTTP_200_OK: UserSerializer()},
+    )
     def retrieve(self, request, *args, **kwargs):
         """
         Retrieve details of a user by user_id.
@@ -68,7 +62,6 @@ class UsersViewSet(ModelViewSet):
             cache.set(f'user_{user_id}', user)
 
         serializer = self.get_serializer(user)
-        print("===========", cache.get(f'user_{user_id}'))
         return Response(serializer.data)
 
 
@@ -78,25 +71,47 @@ class StockDataViewSet(ModelViewSet):
 
     @swagger_auto_schema(responce_body=StockDataSerializer)
     def list(self, request, *args, **kwargs):
+        """
+        Retrieve a list of StockData.
+        """
         return super(StockDataViewSet, self).list(request, *args, **kwargs)
 
     @swagger_auto_schema(request_body=StockDataSerializer)
     def create(self, request, *args, **kwargs):
+        """
+        Create a new instance of StockData.
+        """
         return super(StockDataViewSet, self).create(request, *args, **kwargs)
 
+    @swagger_auto_schema(
+        responses={status.HTTP_200_OK: StockDataSerializer()},
+        operation_summary="Retrieve a user by user_id.",
+    )
     def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve instance of StockData.
+        """
         user_id = self.request.query_params.get('user_id')
         if not user_id:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Users.objects.get(username=user_id)
+
+        user = Users.objects.get(username=user_id)
+        serializer = self.serializer_class(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TransactionViewSet(ModelViewSet):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
 
-    @swagger_auto_schema(request_body=TransactionSerializer)
+    @swagger_auto_schema(
+        request_body=TransactionSerializer,
+        responses={status.HTTP_201_CREATED: "Transaction initiated successfully"},
+    )
     def create(self, request, *args, **kwargs):
+        """
+        Create a new instance of Transaction.
+        """
         user_id = request.data.get('user_id')
         ticker = request.data.get('ticker')
         user = Users.objects.get(id=user_id)
@@ -109,9 +124,18 @@ class TransactionViewSet(ModelViewSet):
             return Response("Low balance!", status=status.HTTP_400_BAD_REQUEST)
 
         save_transaction.delay(request.data)
-        print('working!!!...')
         return Response(status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(
+        responses={status.HTTP_200_OK: TransactionSerializer(many=True)},
+        operation_summary="Retrieve transactions for a user",
+    )
+    @action(detail=False, methods=['GET'])
     def get_queryset(self):
+        """
+        Get transactions against a user_id.
+        """
         user_id = self.request.query_params.get('user_id')
-        return Transaction.objects.filter(user=user_id)
+        transactions = Transaction.objects.filter(user=user_id)
+        serializer = self.get_serializer(transactions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
