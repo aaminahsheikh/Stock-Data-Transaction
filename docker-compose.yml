@@ -1,0 +1,50 @@
+version: '3'
+
+networks:
+  default:
+    driver: bridge
+
+services:
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - stock_db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A stock_home.celery_services.celery_services.celery_app worker --loglevel=INFO
+    volumes:
+      - ./:/app
+    depends_on:
+      - stock_db
+      - redis
+
+  flower:
+    image: mher/flower
+    command: celery flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - FLOWER_PORT=5555
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./:/app
+    depends_on:
+      - worker
+
+  stock_db:
+    container_name: stock_db
+    image: postgres:13
+    volumes:
+      - ./:/app
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"

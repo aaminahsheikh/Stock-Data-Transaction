@@ -1,0 +1,8 @@
+Django==4.2.6
+djangorestframework==3.14.0
+django-redis==5.4.0
+redis==5.0.1
+flower==2.0.1
+psycopg2==2.9.9
+drf-yasg==1.21.7
+django-dotenv==1.4.2
